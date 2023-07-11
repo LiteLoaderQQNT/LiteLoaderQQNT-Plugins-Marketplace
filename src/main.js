@@ -2,8 +2,6 @@
 const { ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const http = require("http");
-const https = require("https");
 const StreamZip = require("node-stream-zip");
 
 const default_config = {
