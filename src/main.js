@@ -6,38 +6,6 @@ const http = require("http");
 const https = require("https");
 const StreamZip = require("node-stream-zip");
 
-
-// 简易的GET请求函数
-function request(url) {
-    return new Promise((resolve, reject) => {
-        const protocol = url.startsWith("https") ? https : http;
-        const request = protocol.get(url);
-        request.on("error", error => reject(error));
-        request.on("response", response => {
-            const chunks = [];
-            const result = {
-                isRedirect: false,
-                body: null
-            }
-            // 发生跳转就返回新连接
-            if (response.statusCode >= 300 && response.statusCode <= 399) {
-                result.isRedirect = true;
-                result.body = response.headers.location;
-                reject(result);
-                return;
-            }
-            response.on("error", error => reject(error));
-            response.on("data", chunk => chunks.push(chunk));
-            response.on("end", () => {
-                result.isRedirect = false;
-                result.body = Buffer.concat(chunks);
-                resolve(result);
-            });
-        });
-    });
-}
-
-
 const default_config = {
     "mirrorlist": [
         "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/list.json"
@@ -93,12 +61,11 @@ function setConfig(liteloader, new_config) {
 async function install(liteloader, info) {
     // 下载插件
     const url = `https://codeload.github.com/${info.repo}/zip/refs/heads/${info.branch}`;
-    const { isRedirect, body } = await request(url);
+    const response = await fetch(url, { redirect: "error" }).catch();// 重定向直接丢掉，忽略报错
 
-    // 如果需要跳转
-    if (isRedirect) {
-        return;
-    }
+    if (!response.ok) return; // TODO: 安装失败提醒 建议让install函数返回bool，控制台输出报错
+
+    const body = Buffer.from(await response.arrayBuffer());
 
     // 保存插件压缩包
     const cache_path = path.join(liteloader.path.plugins_cache, "plugins_marketplace");
