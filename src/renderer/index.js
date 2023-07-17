@@ -39,69 +39,6 @@ const list_tips_error_event = new CustomEvent("error");
 const list_tips_end_event = new CustomEvent("end");
 
 
-// 一个插件列表-插件条目生成函数
-function createPluginItem(manifest, details, install, uninstall, update, restart) {
-    const temp = `
-    <div class="wrap">
-        <div class="vertical-list-item">
-            <img src="${manifest?.thumbnail ?? ""}" class="thumbnail">
-            <div class="info">
-                <h2 class="name">${manifest.name}</h2>
-                <p class="secondary-text description">${manifest.description}</p>
-            </div>
-            <div class="ops-btns">
-                <button class="q-button q-button--small q-button--secondary details">详情</button>
-                <button class="q-button q-button--small q-button--secondary install">安装</button>
-                <button class="q-button q-button--small q-button--secondary uninstall">卸载</button>
-                <button class="q-button q-button--small q-button--secondary update">更新</button>
-                <button class="q-button q-button--small q-button--secondary restart">重启</button>
-            </div>
-        </div>
-        <hr class="horizontal-dividing-line" />
-        <div class="vertical-list-item">
-            <p class="secondary-text extra-information">
-                <span>类型：${type_map.get(manifest.type)}</span>
-                <span>平台：${manifest?.platform?.map(platform => platform_map.get(platform).toString())}</span>
-                <span>版本：${manifest.version}</span>
-                <span>开发：
-                    <a href="${manifest.author[0].link}" target="_blank">${manifest.author[0].name}</a>
-                </span>
-            </p>
-        </div>
-    </div>
-    `;
-    const doc = new DOMParser().parseFromString(temp, "text/html");
-
-    // 获取按钮
-    const details_btn = doc.querySelector(".details");
-    const install_btn = doc.querySelector(".install");
-    const uninstall_btn = doc.querySelector(".uninstall");
-    const update_btn = doc.querySelector(".update");
-    const restart_btn = doc.querySelector(".restart");
-
-    // 初始化按钮功能
-    details_btn.addEventListener("click", details);
-    install_btn.addEventListener("click", install);
-    uninstall_btn.addEventListener("click", uninstall);
-    update_btn.addEventListener("click", update);
-    restart_btn.addEventListener("click", restart);
-
-    // 获取插件状态
-    const local_version = LiteLoader.plugins[manifest.slug]?.manifest?.version ?? "";
-    const remote_version = manifest.version;
-    const is_installed = manifest.slug in LiteLoader.plugins;
-    const is_updated = !utils.compareVersion(local_version, remote_version);
-
-    // 初始化按钮显示
-    install_btn.classList.toggle("hidden", is_installed);
-    uninstall_btn.classList.toggle("hidden", !(is_installed && is_updated));
-    update_btn.classList.toggle("hidden", !(is_installed && !is_updated));
-    restart_btn.classList.toggle("hidden", true);
-
-    return doc.querySelector(".wrap");
-}
-
-
 // 合并插件源为新列表
 async function mergeMirrorlist(mirrorlist) {
     const mirrorlist_set = new Set();
@@ -147,12 +84,94 @@ async function getManifestList(mirrorlist) {
 }
 
 
+// 处理manifest
+function processingManifest(manifest) {
+    const { repo, branch } = manifest?.repository ?? { repo: "", branch: "" };
+    const plugin_icon = `https://raw.githubusercontent.com/${repo}/${branch}/${manifest?.thumbnail}`;
+    const default_icon = `file://${plugin_path.plugin}/src/renderer/default_icon.png`;
+    const system_name = manifest?.platform?.map(value => platform_map.get(value)) ?? "";
+    return {
+        ...manifest,
+        thumbnail: manifest?.thumbnail ? plugin_icon : default_icon,
+        type: type_map.get(manifest.type),
+        platform: system_name.toString().replaceAll(",", " | "),
+        author: {
+            name: manifest.author?.name ?? manifest.author[0].name,
+            link: manifest.author?.link ?? manifest.author[0].link
+        }
+    }
+}
+
+
+// 插件条目生成函数
+function createPluginItem(manifest, details, install, uninstall, update, restart) {
+    const temp = `
+    <div class="wrap">
+        <div class="vertical-list-item">
+            <img src="${manifest.thumbnail}" class="thumbnail">
+            <div class="info">
+                <h2 class="name">${manifest.name}</h2>
+                <p class="secondary-text description">${manifest.description}</p>
+            </div>
+            <div class="ops-btns">
+                <button class="q-button q-button--small q-button--secondary details">详情</button>
+                <button class="q-button q-button--small q-button--secondary install">安装</button>
+                <button class="q-button q-button--small q-button--secondary uninstall">卸载</button>
+                <button class="q-button q-button--small q-button--secondary update">更新</button>
+                <button class="q-button q-button--small q-button--secondary restart">重启</button>
+            </div>
+        </div>
+        <hr class="horizontal-dividing-line" />
+        <div class="vertical-list-item">
+            <p class="secondary-text extra-information">
+                <span>类型：${manifest.type}</span>
+                <span>平台：${manifest.platform}</span>
+                <span>版本：${manifest.version}</span>
+                <span>开发：
+                    <a href="${manifest.author.link}" target="_blank">${manifest.author.name}</a>
+                </span>
+            </p>
+        </div>
+    </div>
+    `;
+    const doc = new DOMParser().parseFromString(temp, "text/html");
+
+    // 获取按钮
+    const details_btn = doc.querySelector(".details");
+    const install_btn = doc.querySelector(".install");
+    const uninstall_btn = doc.querySelector(".uninstall");
+    const update_btn = doc.querySelector(".update");
+    const restart_btn = doc.querySelector(".restart");
+
+    // 初始化按钮功能
+    details_btn.addEventListener("click", details);
+    install_btn.addEventListener("click", install);
+    uninstall_btn.addEventListener("click", uninstall);
+    update_btn.addEventListener("click", update);
+    restart_btn.addEventListener("click", restart);
+
+    // 获取插件状态
+    const local_version = LiteLoader.plugins[manifest.slug]?.manifest?.version ?? "";
+    const remote_version = manifest.version;
+    const is_installed = manifest.slug in LiteLoader.plugins;
+    const is_updated = !utils.compareVersion(local_version, remote_version);
+
+    // 初始化按钮显示
+    install_btn.classList.toggle("hidden", is_installed);
+    uninstall_btn.classList.toggle("hidden", !(is_installed && is_updated));
+    update_btn.classList.toggle("hidden", !(is_installed && !is_updated));
+    restart_btn.classList.toggle("hidden", true);
+
+    return doc.querySelector(".wrap");
+}
+
+
 // 给插件列表添加内容
 function getPluginListContentFragment(manifest_list) {
     const fragment = document.createDocumentFragment();
     for (const manifest of manifest_list) {
         const plugin_item = createPluginItem(
-            manifest,
+            processingManifest(manifest),
             // 详情
             async () => open(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
             // 安装
