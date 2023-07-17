@@ -92,17 +92,15 @@ function setConfig(liteloader, new_config) {
 
 
 async function install(liteloader, info) {
-    const latest_release_url = `https://github.com/${info.repo}/releases/latest`;
+    const latest_release_url = `https://github.com/${info.repo}/releases/latest/download/plugin.zip`;
     const source_code_url = `https://codeload.github.com/${info.repo}/zip/refs/heads/${info.branch}`;
 
     const downloadAndInstallPlugin = async (url) => {
         const { isRedirect, body } = await request(url);
 
-        // 一般情况下是useRelease，这里用来解析release中文件下载地址，并重新调用函数下载
+        // 一般情况下是useRelease，这里用来重新调用函数下载
         if (isRedirect) {
-            const tag = body.substring(body.lastIndexOf("/") + 1);
-            const url = `https://github.com/${info.repo}/releases/download/${tag}/plugin.zip`;
-            const { isRedirect, body } = await request(url);
+            const { isRedirect, body } = await request(body);
             if (isRedirect) {
                 return await downloadAndInstallPlugin(body);
             }
