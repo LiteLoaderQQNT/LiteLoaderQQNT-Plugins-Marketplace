@@ -10,7 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/list.json"
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/builtins.json",
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/plugins.json"
     ],
     "plugin_type": [
         "all",
@@ -34,25 +35,14 @@ function request(url) {
         const request = protocol.get(url);
         request.on("error", error => reject(error));
         request.on("response", response => {
-            const chunks = [];
-            const result = {
-                isRedirect: false,
-                body: null
-            }
-            // 发生跳转就返回新连接
+            // 发生跳转就继续请求
             if (response.statusCode >= 300 && response.statusCode <= 399) {
-                result.isRedirect = true;
-                result.body = response.headers.location;
-                reject(result);
-                return;
+                return reject(request(response.headers.location));
             }
+            const chunks = [];
             response.on("error", error => reject(error));
             response.on("data", chunk => chunks.push(chunk));
-            response.on("end", () => {
-                result.isRedirect = false;
-                result.body = Buffer.concat(chunks);
-                resolve(result);
-            });
+            response.on("end", () => resolve(Buffer.concat(chunks)));
         });
     });
 }
@@ -91,35 +81,31 @@ function setConfig(liteloader, new_config) {
 }
 
 
-async function install(liteloader, info) {
-    const latest_release_url = `https://github.com/${info.repo}/releases/latest/download/plugin.zip`;
-    const source_code_url = `https://codeload.github.com/${info.repo}/zip/refs/heads/${info.branch}`;
+async function install(liteloader, manifest) {
+    const { repo, branch, use_release } = manifest.repository;
+    const { tag, name } = use_release ?? {};
+    const latest_release_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const source_code_url = `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`;
 
     const downloadAndInstallPlugin = async (url) => {
-        const { isRedirect, body } = await request(url);
-
-        // 一般情况下是useRelease，这里用来重新调用函数下载
-        if (isRedirect) {
-            const { isRedirect, body } = await request(body);
-            if (isRedirect) {
-                return await downloadAndInstallPlugin(body);
-            }
-        }
+        const body = await request(url);
 
         // 保存插件压缩包
         const cache_path = path.join(liteloader.path.plugins_cache, "plugins_marketplace");
-        const cache_file_path = path.join(cache_path, `${info.repo.split("/")[1]}.zip`);
+        const cache_file_path = path.join(cache_path, `${repo.split("/")[1]}.zip`);
         fs.mkdirSync(cache_path, { recursive: true });
         fs.writeFileSync(cache_file_path, body);
 
         // 解压并安装插件
+        const { plugins, builtins } = liteloader.path;
+        const plugin_path = manifest.type == "core" ? builtins : plugins;
         const zip = new StreamZip.async({ file: cache_file_path });
-        await zip.extract(null, liteloader.path.plugins);
+        await zip.extract(null, plugin_path);
         await zip.close();
-    };
+    }
 
     try {
-        const url = info.useRelease ? latest_release_url : source_code_url;
+        const url = use_release ? latest_release_url : source_code_url;
         await downloadAndInstallPlugin(url);
         return true;
     }
@@ -129,8 +115,8 @@ async function install(liteloader, info) {
 }
 
 
-async function uninstall(liteloader, slug, update_mode = false) {
-    const paths = liteloader.plugins?.[slug]?.path;
+async function uninstall(liteloader, manifest, update_mode = false) {
+    const paths = liteloader.plugins[manifest.slug].path;
 
     // 没有返回false
     if (!paths) {
@@ -153,13 +139,13 @@ async function uninstall(liteloader, slug, update_mode = false) {
 }
 
 
-async function update(liteloader, info, slug) {
-    const uninstall_status_is_ok = await uninstall(liteloader, slug, true);
-    if (!uninstall_status_is_ok) {
+async function update(liteloader, manifest) {
+    // 先卸载
+    if (!(await uninstall(liteloader, manifest, true))) {
         return false;
     }
-    const install_status_is_ok = await install(liteloader, info);
-    if (!install_status_is_ok) {
+    // 后安装
+    if (!(await install(liteloader, manifest))) {
         return false;
     }
     return true;
@@ -179,36 +165,37 @@ function isOnline() {
 
 // 加载插件时触发
 function onLoad(plugin, liteloader) {
+    // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
         (event, ...message) => getConfig(liteloader, ...message)
     );
-
+    // 设置配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.setConfig",
         (event, ...message) => setConfig(liteloader, ...message)
     );
-
+    // 安装
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.install",
         (event, ...message) => install(liteloader, ...message)
     );
-
+    // 卸载
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.uninstall",
         (event, ...message) => uninstall(liteloader, ...message)
     );
-
+    // 更新
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.update",
         (event, ...message) => update(liteloader, ...message)
     );
-
+    // 重开
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.restart",
         (event, ...message) => restart()
     );
-
+    // 是否有网
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.isOnline",
         (event, ...message) => isOnline()

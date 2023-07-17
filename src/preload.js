@@ -4,28 +4,35 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 // 在window对象下导出只读对象
 contextBridge.exposeInMainWorld("plugins_marketplace", {
+    // 获取配置
     getConfig: () => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.getConfig"
     ),
-    setConfig: new_config => ipcRenderer.invoke(
+    // 设置配置
+    setConfig: config => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.setConfig",
-        new_config
+        config
     ),
-    install: info => ipcRenderer.invoke(
+    // 安装
+    install: manifest => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.install",
-        info
+        manifest
     ),
-    uninstall: slug => ipcRenderer.invoke(
+    // 卸载
+    uninstall: manifest => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.uninstall",
-        slug
+        manifest
     ),
-    update: (info, slug) => ipcRenderer.invoke(
+    // 更新
+    update: manifest => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.update",
-        info, slug
+        manifest
     ),
+    // 重开
     restart: () => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.restart"
     ),
+    // 是否有网
     isOnline: () => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.isOnline"
     )

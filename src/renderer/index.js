@@ -11,16 +11,18 @@ const config = await plugins_marketplace.getConfig();
 
 
 // 创建一个类型映射
-const type_map = new Map();
-type_map.set("core", "核心");
-type_map.set("extension", "扩展");
-type_map.set("theme", "主题");
-type_map.set("framew", "依赖");
+const type_map = new Map([
+    ["core", "核心"],
+    ["extension", "扩展"],
+    ["theme", "主题"],
+    ["framew", "依赖"],
+]);
 
-const platform_map = new Map();
-platform_map.set("win32", "Windows");
-platform_map.set("linux", "Linux");
-platform_map.set("darwin", "MacOS");
+const platform_map = new Map([
+    ["win32", "Windows"],
+    ["linux", "Linux"],
+    ["darwin", "MacOS"],
+]);
 
 
 // 自定义事件
@@ -67,7 +69,8 @@ async function getManifestList(mirrorlist) {
 
     // 同时请求多个源的列表，并按照顺序返回
     const requests = mirrorlist.map(info => {
-        const url = `https://raw.githubusercontent.com/${info.repo}/${info.branch}/manifest.json`;
+        const { repo, branch } = info;
+        const url = `https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
         return fetch(url);
     });
     const responses = await Promise.allSettled(requests);
@@ -168,50 +171,31 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
 
 // 给插件列表添加内容
 function getPluginListContentFragment(manifest_list) {
+    // 安装，卸载，更新，重启
+    const handleAction = async (event, callback) => {
+        event.target.disabled = true;
+        if (await callback()) {
+            event.target.classList.toggle("hidden", true);
+            const parentNode = event.target.parentNode;
+            parentNode.querySelector(".restart").classList.remove("hidden");
+        }
+        event.target.disabled = false;
+    }
+    // 创建页面内容
     const fragment = document.createDocumentFragment();
     for (const manifest of manifest_list) {
         const plugin_item = createPluginItem(
             processingManifest(manifest),
             // 详情
-            async () => open(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
+            () => open(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
             // 安装
-            async event => {
-                event.target.disabled = true;
-                const status_is_ok = await plugins_marketplace.install(manifest.repository);
-                if (status_is_ok) {
-                    event.target.classList.toggle("hidden", true);
-                    const parentNode = event.target.parentNode;
-                    parentNode.querySelector(".restart").classList.remove("hidden");
-                }
-                event.target.disabled = false;
-            },
+            event => handleAction(event, () => plugins_marketplace.install(manifest)),
             // 卸载
-            async event => {
-                event.target.disabled = true;
-                const status_is_ok = await plugins_marketplace.uninstall(manifest.slug);
-                if (status_is_ok) {
-                    event.target.classList.toggle("hidden", true);
-                    const parentNode = event.target.parentNode;
-                    parentNode.querySelector(".restart").classList.remove("hidden");
-                }
-                event.target.disabled = false;
-            },
+            event => handleAction(event, () => plugins_marketplace.uninstall(manifest)),
             // 更新
-            async event => {
-                event.target.disabled = true;
-                const status_is_ok = await plugins_marketplace.update(manifest.repository, manifest.slug);
-                if (status_is_ok) {
-                    event.target.classList.toggle("hidden", true);
-                    const parentNode = event.target.parentNode;
-                    parentNode.querySelector(".restart").classList.remove("hidden");
-                }
-                event.target.disabled = false;
-            },
+            event => handleAction(event, () => plugins_marketplace.update(manifest)),
             // 重启
-            async event => {
-                event.target.disabled = true;
-                await plugins_marketplace.restart();
-            }
+            event => handleAction(event, () => plugins_marketplace.restart())
         );
         fragment.appendChild(plugin_item);
     }
