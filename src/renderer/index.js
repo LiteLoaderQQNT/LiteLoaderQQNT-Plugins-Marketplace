@@ -291,6 +291,12 @@ async function initListCtl(list_ctl, plugin_list) {
         pulldown_menu_list.addEventListener("click", async event => {
             const target = event.target.closest(".q-pulldown-menu-list-item");
             if (target && !target.classList.contains("selected")) {
+                //下拉框菜单点击后，先隐藏下拉框本身
+                const all_context_menu = list_ctl.querySelectorAll(".q-context-menu");
+                for (const context_menu of all_context_menu) {
+                    context_menu.classList.add("hidden");
+                }
+
                 // 移除所有条目的选择状态
                 for (const pulldown_menu_list_item of pulldown_menu_list_items) {
                     pulldown_menu_list_item.classList.remove("selected");
