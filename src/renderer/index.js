@@ -70,7 +70,7 @@ async function getManifestList(mirrorlist) {
     // 同时请求多个源的列表，并按照顺序返回
     const requests = mirrorlist.map(info => {
         const { repo, branch } = info;
-        const url = `https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
+        const url = `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
         return fetch(url);
     });
     const responses = await Promise.allSettled(requests);
@@ -90,12 +90,17 @@ async function getManifestList(mirrorlist) {
 // 处理manifest
 function processingManifest(manifest) {
     const { repo, branch } = manifest?.repository ?? { repo: "", branch: "" };
-    const plugin_icon = `https://raw.githubusercontent.com/${repo}/${branch}/${manifest?.thumbnail}`;
     const default_icon = `file://${plugin_path.plugin}/src/renderer/default_icon.png`;
+    let plugin_icon = manifest?.thumbnail ?? "";
+    if (!plugin_icon) {
+        plugin_icon = default_icon;
+    } else if (plugin_icon.startsWith("./")) {
+        plugin_icon = `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/${plugin_icon}`;
+    }
     const system_name = manifest?.platform?.map(value => platform_map.get(value)) ?? "";
     return {
         ...manifest,
-        thumbnail: manifest?.thumbnail ? plugin_icon : default_icon,
+        thumbnail: plugin_icon,
         type: type_map.get(manifest.type),
         platform: system_name.toString().replaceAll(",", " | "),
         author: {
