@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/builtins.json",
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/plugins.json"
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/plugins.json",
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/builtins.json"
     ],
     "plugin_type": [
         "all",
@@ -32,17 +32,17 @@ const default_config = {
 function request(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith("https") ? https : http;
-        const request = protocol.get(url);
-        request.on("error", error => reject(error));
-        request.on("response", response => {
+        const req = protocol.get(url);
+        req.on("error", error => reject(error));
+        req.on("response", res => {
             // 发生跳转就继续请求
-            if (response.statusCode >= 300 && response.statusCode <= 399) {
-                return reject(request(response.headers.location));
+            if (res.statusCode >= 300 && res.statusCode <= 399) {
+                return resolve(request(res.headers.location));
             }
             const chunks = [];
-            response.on("error", error => reject(error));
-            response.on("data", chunk => chunks.push(chunk));
-            response.on("end", () => resolve(Buffer.concat(chunks)));
+            res.on("error", error => reject(error));
+            res.on("data", chunk => chunks.push(chunk));
+            res.on("end", () => resolve(Buffer.concat(chunks)));
         });
     });
 }
@@ -84,7 +84,7 @@ function setConfig(liteloader, new_config) {
 async function install(liteloader, manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const latest_release_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
     const source_code_url = `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`;
 
     const downloadAndInstallPlugin = async (url) => {
@@ -100,7 +100,20 @@ async function install(liteloader, manifest) {
         const { plugins, builtins } = liteloader.path;
         const plugin_path = manifest.type == "core" ? builtins : plugins;
         const zip = new StreamZip.async({ file: cache_file_path });
-        await zip.extract(null, plugin_path);
+        const entries = await zip.entries();
+        for (const entry of Object.values(entries)) {
+            const pathname = `${plugin_path}/${entry.name}`;
+            // 创建目录
+            if (entry.isDirectory) {
+                fs.mkdirSync(pathname, { recursive: true });
+                continue;
+            }
+            // 创建文件
+            if (entry.isFile) {
+                await zip.extract(entry.name, pathname);
+                continue;
+            }
+        }
         await zip.close();
     }
 
