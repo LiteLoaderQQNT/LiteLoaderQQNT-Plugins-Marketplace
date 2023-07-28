@@ -1,5 +1,5 @@
 // 运行在 Electron 主进程 下的插件入口
-const { ipcMain, app, net } = require("electron");
+const { ipcMain, app, net, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -175,6 +175,9 @@ function isOnline() {
     return net.online;
 }
 
+function openWeb(url){
+  shell.openExternal(url);
+}
 
 // 加载插件时触发
 function onLoad(plugin, liteloader) {
@@ -212,7 +215,12 @@ function onLoad(plugin, liteloader) {
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.isOnline",
         (event, ...message) => isOnline()
-    )
+    );
+    // 外部打开网址
+    ipcMain.on(
+      "LiteLoader.plugins_marketplace.openWeb",
+      (event, message) => openWeb(message)
+    );
 }
 
 
