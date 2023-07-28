@@ -5,7 +5,7 @@ const fs = require("fs");
 const http = require("http");
 const https = require("https");
 const StreamZip = require("node-stream-zip");
-
+const { exec } = require("child_process");
 
 // 默认配置
 const default_config = {
@@ -176,6 +176,10 @@ function isOnline() {
 }
 
 
+function openWeb(url){
+  exec(`start ${url}`);
+}
+
 // 加载插件时触发
 function onLoad(plugin, liteloader) {
     // 获取配置
@@ -212,7 +216,12 @@ function onLoad(plugin, liteloader) {
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.isOnline",
         (event, ...message) => isOnline()
-    )
+    );
+    // 外部打开网址
+    ipcMain.on(
+      "LiteLoader.plugins_marketplace.openWeb",
+      (event, message) => openWeb(message)
+    );
 }
 
 

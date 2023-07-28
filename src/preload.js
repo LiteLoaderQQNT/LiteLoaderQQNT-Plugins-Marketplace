@@ -35,5 +35,10 @@ contextBridge.exposeInMainWorld("plugins_marketplace", {
     // 是否有网
     isOnline: () => ipcRenderer.invoke(
         "LiteLoader.plugins_marketplace.isOnline"
+    ),
+    // 外部打开网址
+    openWeb: url => ipcRenderer.send(
+      "LiteLoader.plugins_marketplace.openWeb",
+      url
     )
 });
