@@ -3,7 +3,7 @@ const plugin_path = LiteLoader.plugins.plugins_marketplace.path;
 
 
 // 导入工具函数
-const utils = await import(`file://${plugin_path.plugin}/src/renderer/utils.js`);
+const utils = await import(`llqqnt://local-file/${plugin_path.plugin}/src/renderer/utils.js`);
 
 
 // 获取配置文件
@@ -91,7 +91,7 @@ async function getManifestList(mirrorlist) {
 function processingManifest(manifest) {
     const { repo, branch } = manifest?.repository ?? { repo: "", branch: "" };
     const plugin_icon = `https://raw.githubusercontent.com/${repo}/${branch}/${manifest?.thumbnail}`;
-    const default_icon = `file://${plugin_path.plugin}/src/renderer/default_icon.png`;
+    const default_icon = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/default_icon.png`;
     const system_name = manifest?.platform?.map(value => platform_map.get(value)) ?? "";
     return {
         ...manifest,
@@ -496,14 +496,14 @@ async function initPluginList(plugin_list, list_ctl) {
 // 配置界面
 export async function onConfigView(view) {
     // CSS
-    const css_file_path = `file://${plugin_path.plugin}/src/renderer/style.css`;
+    const css_file_path = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/style.css`;
     const link_element = document.createElement("link");
     link_element.rel = "stylesheet";
     link_element.href = css_file_path;
     document.head.appendChild(link_element);
 
     // HTMl
-    const html_file_path = `file://${plugin_path.plugin}/src/renderer/view.html`;
+    const html_file_path = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/view.html`;
     const html_text = await (await fetch(html_file_path)).text();
     const parser = new DOMParser();
     const doc = parser.parseFromString(html_text, "text/html");
