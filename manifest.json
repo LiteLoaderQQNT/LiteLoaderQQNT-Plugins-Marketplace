@@ -12,7 +12,11 @@
     },
     "repository": {
         "repo": "mo-jinran/LiteLoaderQQNT-Plugins-Marketplace",
-        "branch": "main"
+        "branch": "main",
+        "use_release": {
+            "tag": "latest",
+            "name": "LiteLoaderQQNT-Plugins-Marketplace.zip"
+        }
     },
     "platform": [
         "win32",
