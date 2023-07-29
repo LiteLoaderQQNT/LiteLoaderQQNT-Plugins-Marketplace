@@ -131,7 +131,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
                 <span>平台：${manifest.platform}</span>
                 <span>版本：${manifest.version}</span>
                 <span>开发：
-                    <a href="${manifest.author.link}" target="_blank">${manifest.author.name}</a>
+                <a href="javascript:void(0);" onclick="plugins_marketplace.openWeb('${manifest.author.link}')" >${manifest.author.name}</a>
                 </span>
             </p>
         </div>
@@ -187,7 +187,7 @@ function getPluginListContentFragment(manifest_list) {
         const plugin_item = createPluginItem(
             processingManifest(manifest),
             // 详情
-            () => open(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
+            () => plugins_marketplace.openWeb(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
             // 安装
             event => handleAction(event, () => plugins_marketplace.install(manifest)),
             // 卸载
