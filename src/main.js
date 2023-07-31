@@ -99,7 +99,7 @@ async function install(manifest) {
 
         // 解压并安装插件
         const { plugins, builtins } = LiteLoader.path;
-        const plugin_path = `${manifest.type == "core" ? builtins : plugins}/${manifest.slug}`;
+        const plugin_path = `${manifest.type == "core" ? builtins : plugins}/${use_release ? manifest.slug : ""}`;
         fs.mkdirSync(plugin_path, { recursive: true });
         const zip = new StreamZip.async({ file: cache_file_path });
         const entries = await zip.entries();
