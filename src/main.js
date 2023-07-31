@@ -84,7 +84,7 @@ function setConfig(new_config) {
 async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
     const source_code_url = `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`;
 
     const downloadAndInstallPlugin = async (url) => {
@@ -92,13 +92,14 @@ async function install(manifest) {
 
         // 保存插件压缩包
         const cache_path = path.join(LiteLoader.path.plugins_cache, "plugins_marketplace");
-        const cache_file_path = path.join(cache_path, `${repo.split("/")[1]}.zip`);
+        const cache_file_path = path.join(cache_path, `${manifest.slug}.zip`);
         fs.mkdirSync(cache_path, { recursive: true });
         fs.writeFileSync(cache_file_path, body);
 
         // 解压并安装插件
         const { plugins, builtins } = LiteLoader.path;
-        const plugin_path = manifest.type == "core" ? builtins : plugins;
+        const plugin_path = `${manifest.type == "core" ? builtins : plugins}/${manifest.slug}`;
+        fs.mkdirSync(plugin_path, { recursive: true });
         const zip = new StreamZip.async({ file: cache_file_path });
         const entries = await zip.entries();
         for (const entry of Object.values(entries)) {
