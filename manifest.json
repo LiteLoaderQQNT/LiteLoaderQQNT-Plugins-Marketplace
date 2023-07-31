@@ -14,7 +14,7 @@
         "repo": "mo-jinran/LiteLoaderQQNT-Plugins-Marketplace",
         "branch": "main",
         "use_release": {
-            "tag": "latest",
+            "tag": "0.1.1",
             "name": "LiteLoaderQQNT-Plugins-Marketplace.zip"
         }
     },
