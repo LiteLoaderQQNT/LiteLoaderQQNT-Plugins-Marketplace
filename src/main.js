@@ -84,7 +84,8 @@ function setConfig(new_config) {
 async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
+    const release_latest_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const release_tag_url = `https://github.com/${repo}/releases/download/${tag}/${name}`;
     const source_code_url = `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`;
 
     const downloadAndInstallPlugin = async (url) => {
@@ -119,7 +120,8 @@ async function install(manifest) {
     }
 
     try {
-        const url = use_release ? latest_release_url : source_code_url;
+        const release_url = tag == "latest" ? release_latest_url : release_tag_url;
+        const url = use_release ? release_url : source_code_url;
         await downloadAndInstallPlugin(url);
         return true;
     }
