@@ -38,7 +38,7 @@ contextBridge.exposeInMainWorld("plugins_marketplace", {
     ),
     // 外部打开网址
     openWeb: url => ipcRenderer.send(
-      "LiteLoader.plugins_marketplace.openWeb",
-      url
+        "LiteLoader.plugins_marketplace.openWeb",
+        url
     )
 });

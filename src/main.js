@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/plugins.json",
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/builtins.json"
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     "plugin_type": [
         "all",
@@ -175,8 +175,8 @@ function isOnline() {
     return net.online;
 }
 
-function openWeb(url){
-  shell.openExternal(url);
+function openWeb(url) {
+    shell.openExternal(url);
 }
 
 // 加载插件时触发
@@ -218,8 +218,8 @@ function onLoad(plugin, liteloader) {
     );
     // 外部打开网址
     ipcMain.on(
-      "LiteLoader.plugins_marketplace.openWeb",
-      (event, message) => openWeb(message)
+        "LiteLoader.plugins_marketplace.openWeb",
+        (event, message) => openWeb(message)
     );
 }
 
