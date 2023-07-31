@@ -48,8 +48,8 @@ function request(url) {
 }
 
 
-function getConfig(liteloader) {
-    const config_path = liteloader.path.config;
+function getConfig() {
+    const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
@@ -64,8 +64,8 @@ function getConfig(liteloader) {
 }
 
 
-function setConfig(liteloader, new_config) {
-    const config_path = liteloader.path.config;
+function setConfig(new_config) {
+    const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
@@ -81,7 +81,7 @@ function setConfig(liteloader, new_config) {
 }
 
 
-async function install(liteloader, manifest) {
+async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
     const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
@@ -91,13 +91,13 @@ async function install(liteloader, manifest) {
         const body = await request(url);
 
         // 保存插件压缩包
-        const cache_path = path.join(liteloader.path.plugins_cache, "plugins_marketplace");
+        const cache_path = path.join(LiteLoader.path.plugins_cache, "plugins_marketplace");
         const cache_file_path = path.join(cache_path, `${repo.split("/")[1]}.zip`);
         fs.mkdirSync(cache_path, { recursive: true });
         fs.writeFileSync(cache_file_path, body);
 
         // 解压并安装插件
-        const { plugins, builtins } = liteloader.path;
+        const { plugins, builtins } = LiteLoader.path;
         const plugin_path = manifest.type == "core" ? builtins : plugins;
         const zip = new StreamZip.async({ file: cache_file_path });
         const entries = await zip.entries();
@@ -128,8 +128,8 @@ async function install(liteloader, manifest) {
 }
 
 
-async function uninstall(liteloader, manifest, update_mode = false) {
-    const paths = liteloader.plugins[manifest.slug].path;
+async function uninstall(manifest, update_mode = false) {
+    const paths = LiteLoader.plugins[manifest.slug].path;
 
     // 没有返回false
     if (!paths) {
@@ -152,13 +152,13 @@ async function uninstall(liteloader, manifest, update_mode = false) {
 }
 
 
-async function update(liteloader, manifest) {
+async function update(manifest) {
     // 先卸载
-    if (!(await uninstall(liteloader, manifest, true))) {
+    if (!(await uninstall(manifest, true))) {
         return false;
     }
     // 后安装
-    if (!(await install(liteloader, manifest))) {
+    if (!(await install(manifest))) {
         return false;
     }
     return true;
@@ -180,31 +180,31 @@ function openWeb(url) {
 }
 
 // 加载插件时触发
-function onLoad(plugin, liteloader) {
+function onLoad(plugin) {
     // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
-        (event, ...message) => getConfig(liteloader, ...message)
+        (event, ...message) => getConfig(...message)
     );
     // 设置配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.setConfig",
-        (event, ...message) => setConfig(liteloader, ...message)
+        (event, ...message) => setConfig(...message)
     );
     // 安装
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.install",
-        (event, ...message) => install(liteloader, ...message)
+        (event, ...message) => install(...message)
     );
     // 卸载
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.uninstall",
-        (event, ...message) => uninstall(liteloader, ...message)
+        (event, ...message) => uninstall(...message)
     );
     // 更新
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.update",
-        (event, ...message) => update(liteloader, ...message)
+        (event, ...message) => update(...message)
     );
     // 重开
     ipcMain.handle(
@@ -219,7 +219,7 @@ function onLoad(plugin, liteloader) {
     // 外部打开网址
     ipcMain.on(
         "LiteLoader.plugins_marketplace.openWeb",
-        (event, message) => openWeb(message)
+        (event, ...message) => openWeb(...message)
     );
 }
 
