@@ -4,7 +4,7 @@
     "name": "LiteLoader 插件市场",
     "slug": "plugins_marketplace",
     "description": "LiteLoaderQQNT的插件市场",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "thumbnail": "",
     "author": {
         "name": "沫烬染",
@@ -14,7 +14,7 @@
         "repo": "mo-jinran/LiteLoaderQQNT-Plugins-Marketplace",
         "branch": "v3",
         "use_release": {
-            "tag": "0.1.2",
+            "tag": "0.1.3",
             "name": "LiteLoaderQQNT-Plugins-Marketplace.zip"
         }
     },
