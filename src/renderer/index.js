@@ -123,6 +123,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
                 <button class="q-button q-button--small q-button--secondary uninstall">卸载</button>
                 <button class="q-button q-button--small q-button--secondary update">更新</button>
                 <button class="q-button q-button--small q-button--secondary restart">重启</button>
+                <button class="q-button q-button--small q-button--secondary installing">正在安装</button>
             </div>
         </div>
         <hr class="horizontal-dividing-line" />
@@ -143,9 +144,12 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     // 获取按钮
     const details_btn = doc.querySelector(".details");
     const install_btn = doc.querySelector(".install");
+    const installing_btn = doc.querySelector(".installing");
     const uninstall_btn = doc.querySelector(".uninstall");
     const update_btn = doc.querySelector(".update");
     const restart_btn = doc.querySelector(".restart");
+
+    let is_installing = true;
 
     // 初始化按钮功能
     details_btn.addEventListener("click", details);
@@ -153,7 +157,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     uninstall_btn.addEventListener("click", uninstall);
     update_btn.addEventListener("click", update);
     restart_btn.addEventListener("click", restart);
-
+    console.log(is_installing)
     // 获取插件状态
     const local_version = LiteLoader.plugins[manifest.slug]?.manifest?.version ?? "";
     const remote_version = manifest.version;
@@ -165,6 +169,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     uninstall_btn.classList.toggle("hidden", !(is_installed && is_updated));
     update_btn.classList.toggle("hidden", !(is_installed && !is_updated));
     restart_btn.classList.toggle("hidden", true);
+    installing_btn.classList.toggle("hidden", true);
 
     return doc.querySelector(".wrap");
 }
@@ -180,30 +185,31 @@ function getPluginListContentFragment(manifest_list) {
 
 function addPluginListContentFragment(fragment, manifest_list) {
     // 安装，卸载，更新，重启
-    const handleAction = async (event, callback) => {
+    const handleAction = async (event, callback, manifest) => {
         event.target.disabled = true;
+        const parentNode = event.target.parentNode;
+        event.target.classList.toggle("hidden", true);
+        parentNode.querySelector(".installing").classList.remove("hidden");
         if (await callback()) {
-            event.target.classList.toggle("hidden", true);
-            const parentNode = event.target.parentNode;
+            parentNode.querySelector(".installing").classList.toggle("hidden", true);
             parentNode.querySelector(".restart").classList.remove("hidden");
         }
         event.target.disabled = false;
     }
-    // 创建页面内容
-    const fragment = document.createDocumentFragment();
+
     for (const manifest of manifest_list) {
         const plugin_item = createPluginItem(
             processingManifest(manifest),
             // 详情
             () => plugins_marketplace.openWeb(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
             // 安装
-            event => handleAction(event, () => plugins_marketplace.install(manifest)),
+            event => handleAction(event, () => plugins_marketplace.install(manifest), manifest),
             // 卸载
-            event => handleAction(event, () => plugins_marketplace.uninstall(manifest)),
+            event => handleAction(event, () => plugins_marketplace.uninstall(manifest), manifest),
             // 更新
-            event => handleAction(event, () => plugins_marketplace.update(manifest)),
+            event => handleAction(event, () => plugins_marketplace.update(manifest), manifest),
             // 重启
-            event => handleAction(event, () => plugins_marketplace.restart())
+            event => handleAction(event, () => plugins_marketplace.restart(), manifest)
         );
         fragment.appendChild(plugin_item);
     }
