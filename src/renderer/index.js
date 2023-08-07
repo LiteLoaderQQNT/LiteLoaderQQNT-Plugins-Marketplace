@@ -157,7 +157,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     uninstall_btn.addEventListener("click", uninstall);
     update_btn.addEventListener("click", update);
     restart_btn.addEventListener("click", restart);
-    console.log(is_installing)
+    
     // 获取插件状态
     const local_version = LiteLoader.plugins[manifest.slug]?.manifest?.version ?? "";
     const remote_version = manifest.version;
@@ -385,12 +385,12 @@ async function initListCtl(list_ctl, plugin_list) {
     // 页码指标，上一页，下一页
     const current_page_text = list_ctl.querySelector(".current-page");
     const total_page_text = list_ctl.querySelector(".total-page");
-
-    const previous_page_btn = list_ctl.querySelector(".previous-page");
-    const next_page_btn = list_ctl.querySelector(".next-page");
-
     current_page_text.textContent = 0;
     total_page_text.textContent = 0;
+
+    /**
+    const previous_page_btn = list_ctl.querySelector(".previous-page");
+    const next_page_btn = list_ctl.querySelector(".next-page");
 
     previous_page_btn.addEventListener("click", () => {
         const content = current_page_text.textContent;
@@ -406,6 +406,7 @@ async function initListCtl(list_ctl, plugin_list) {
             list_ctl_event_target.dispatchEvent(list_ctl_next_page_event);
         }
     });
+     */
 }
 
 
