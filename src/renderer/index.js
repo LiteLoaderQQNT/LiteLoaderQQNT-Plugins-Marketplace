@@ -79,8 +79,12 @@ async function getManifestList(mirrorlist) {
     // 处理manifest列表
     for (const response of responses) {
         if (response.status == "fulfilled") {
-            const manifest = await response.value.json();
-            plugins_list.push(manifest);
+            try {
+                const manifest = await response.value.json();
+                plugins_list.push(manifest);
+            } catch (error) {
+                console.error(error);
+            }
         }
     }
     return plugins_list;
