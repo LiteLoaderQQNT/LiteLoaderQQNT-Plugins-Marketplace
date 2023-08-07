@@ -1,14 +1,16 @@
 // 插件本体的路径
 const plugin_path = LiteLoader.plugins.plugins_marketplace.path;
 
-
 // 导入工具函数
 const utils = await import(`llqqnt://local-file/${plugin_path.plugin}/src/renderer/utils.js`);
 
-
 // 获取配置文件
 const config = await plugins_marketplace.getConfig();
-
+config.search = ""
+// 初始化
+let slug, current_page, mirrorlist_chunks, scrollListenerAdded;
+let start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
+start_mirrorlist = await getManifestList(start_mirrorlist);
 
 // 创建一个类型映射
 const type_map = new Map([
@@ -23,7 +25,6 @@ const platform_map = new Map([
     ["linux", "Linux"],
     ["darwin", "MacOS"],
 ]);
-
 
 // 自定义事件
 const list_ctl_event_target = new EventTarget();
@@ -82,7 +83,6 @@ async function getManifestList(mirrorlist) {
             plugins_list.push(manifest);
         }
     }
-
     return plugins_list;
 }
 
@@ -110,7 +110,7 @@ function processingManifest(manifest) {
 // 插件条目生成函数
 function createPluginItem(manifest, details, install, uninstall, update, restart) {
     const temp = `
-    <div class="wrap">
+    <div class="wrap" id="${manifest.slug}">
         <div class="vertical-list-item">
             <img src="${manifest.thumbnail}" class="thumbnail">
             <div class="info">
@@ -123,6 +123,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
                 <button class="q-button q-button--small q-button--secondary uninstall">卸载</button>
                 <button class="q-button q-button--small q-button--secondary update">更新</button>
                 <button class="q-button q-button--small q-button--secondary restart">重启</button>
+                <button class="q-button q-button--small q-button--secondary installing">正在安装</button>
             </div>
         </div>
         <hr class="horizontal-dividing-line" />
@@ -143,9 +144,12 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     // 获取按钮
     const details_btn = doc.querySelector(".details");
     const install_btn = doc.querySelector(".install");
+    const installing_btn = doc.querySelector(".installing");
     const uninstall_btn = doc.querySelector(".uninstall");
     const update_btn = doc.querySelector(".update");
     const restart_btn = doc.querySelector(".restart");
+
+    let is_installing = true;
 
     // 初始化按钮功能
     details_btn.addEventListener("click", details);
@@ -165,6 +169,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     uninstall_btn.classList.toggle("hidden", !(is_installed && is_updated));
     update_btn.classList.toggle("hidden", !(is_installed && !is_updated));
     restart_btn.classList.toggle("hidden", true);
+    installing_btn.classList.toggle("hidden", true);
 
     return doc.querySelector(".wrap");
 }
@@ -172,31 +177,39 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
 
 // 给插件列表添加内容
 function getPluginListContentFragment(manifest_list) {
+    // 创建页面内容
+    let fragment = document.createDocumentFragment();
+    fragment = addPluginListContentFragment(fragment, manifest_list)
+    return fragment;
+}
+
+function addPluginListContentFragment(fragment, manifest_list) {
     // 安装，卸载，更新，重启
-    const handleAction = async (event, callback) => {
+    const handleAction = async (event, callback, manifest) => {
         event.target.disabled = true;
+        const parentNode = event.target.parentNode;
+        event.target.classList.toggle("hidden", true);
+        parentNode.querySelector(".installing").classList.remove("hidden");
         if (await callback()) {
-            event.target.classList.toggle("hidden", true);
-            const parentNode = event.target.parentNode;
+            parentNode.querySelector(".installing").classList.toggle("hidden", true);
             parentNode.querySelector(".restart").classList.remove("hidden");
         }
         event.target.disabled = false;
     }
-    // 创建页面内容
-    const fragment = document.createDocumentFragment();
+
     for (const manifest of manifest_list) {
         const plugin_item = createPluginItem(
             processingManifest(manifest),
             // 详情
             () => plugins_marketplace.openWeb(`https://github.com/${manifest.repository.repo}/tree/${manifest.repository.branch}`),
             // 安装
-            event => handleAction(event, () => plugins_marketplace.install(manifest)),
+            event => handleAction(event, () => plugins_marketplace.install(manifest), manifest),
             // 卸载
-            event => handleAction(event, () => plugins_marketplace.uninstall(manifest)),
+            event => handleAction(event, () => plugins_marketplace.uninstall(manifest), manifest),
             // 更新
-            event => handleAction(event, () => plugins_marketplace.update(manifest)),
+            event => handleAction(event, () => plugins_marketplace.update(manifest), manifest),
             // 重启
-            event => handleAction(event, () => plugins_marketplace.restart())
+            event => handleAction(event, () => plugins_marketplace.restart(), manifest)
         );
         fragment.appendChild(plugin_item);
     }
@@ -208,10 +221,11 @@ function getPluginListContentFragment(manifest_list) {
 async function initListCtl(list_ctl, plugin_list) {
     // 搜索框
     const search_input = list_ctl.querySelector(".search-input");
-    search_input.addEventListener("change", event => {
-
+    search_input.addEventListener("change", async event => {
+        config.search = search_input.value;
+        plugin_list.innerText = "";
+        await initPluginList(plugin_list, list_ctl);
     });
-
 
     // 高级选项
     const adv_ops_btn = list_ctl.querySelector(".adv-ops-btn");
@@ -254,7 +268,7 @@ async function initListCtl(list_ctl, plugin_list) {
         const pulldown_menu_list_items = pulldown_menu_list.querySelectorAll(".q-pulldown-menu-list-item");
 
         // 初始化选择框按钮显示内容
-        const setValueAndAddSelectedClass = (value) => {
+        const setValueAndAddSelectedClass = async (value) => {
             const name = pulldown_menu.querySelector(`[data-value="${value}"] .content`);
             name.parentNode.classList.add("selected");
             content.value = name.textContent;
@@ -359,7 +373,8 @@ async function initListCtl(list_ctl, plugin_list) {
                         plugin_list.classList.add(item_value);
                         break;
                 }
-
+                plugin_list.innerText = "";
+                await initPluginList(plugin_list, list_ctl);
                 // 保存配置文件
                 await plugins_marketplace.setConfig(config);
             }
@@ -370,7 +385,10 @@ async function initListCtl(list_ctl, plugin_list) {
     // 页码指标，上一页，下一页
     const current_page_text = list_ctl.querySelector(".current-page");
     const total_page_text = list_ctl.querySelector(".total-page");
+    current_page_text.textContent = 0;
+    total_page_text.textContent = 0;
 
+    /**
     const previous_page_btn = list_ctl.querySelector(".previous-page");
     const next_page_btn = list_ctl.querySelector(".next-page");
 
@@ -388,6 +406,7 @@ async function initListCtl(list_ctl, plugin_list) {
             list_ctl_event_target.dispatchEvent(list_ctl_next_page_event);
         }
     });
+     */
 }
 
 
@@ -417,6 +436,47 @@ async function initListTips(list_tips) {
     });
 }
 
+async function add_plugin_list(plugin_list, mirrorlist_current) {
+    list_tips_event_target.dispatchEvent(list_tips_loading_event);
+    let fragment = getPluginListContentFragment(mirrorlist_current);
+    //plugin_list.innerHTML = "";
+    plugin_list.appendChild(fragment);
+    list_tips_event_target.dispatchEvent(list_tips_end_event);
+    const slug = mirrorlist_current[mirrorlist_current.length-1].slug;
+    return slug;
+}
+
+// 页面选择监听
+async function select_plugin_list(plugin_list, list_ctl, total_page_text) {
+    const options = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0,
+    };
+    // 可见性监听
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !scrollListenerAdded) {
+                const scrollElement = document.querySelector(".liteloader .q-scroll-view");
+                // 添加滚动事件监听器
+                scrollElement.addEventListener("scroll", async () => {
+                    const divElement = document.querySelector(`#${slug}`);
+                    const rect = divElement.getBoundingClientRect();
+                    if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+                        if (current_page+1 < total_page_text.textContent) {
+                            current_page = current_page + 1;
+                            const mirrorlist_current = mirrorlist_chunks[current_page]
+                            slug = await add_plugin_list(plugin_list, mirrorlist_current)
+                            document.querySelector(".vertical-list-item.end").innerText = `翻到底了嗷～每页最多展示${document.querySelector(".plugin-list").children.length}个`;
+                        }
+                    }
+                });
+                scrollListenerAdded = true;
+            }
+        });
+    }, options);
+    observer.observe(plugin_list);
+}
 
 // 初始化插件列表区域
 async function initPluginList(plugin_list, list_ctl) {
@@ -431,9 +491,9 @@ async function initPluginList(plugin_list, list_ctl) {
     }
 
     try {
-        const mirrorlist = await mergeMirrorlist(config.mirrorlist);
-        let mirrorlist_chunks = utils.groupArrayElements(mirrorlist, 10);
-
+        let start = false;
+        const mirrorlist = await get_select_mirrorlist(start_mirrorlist)
+        mirrorlist_chunks = utils.groupArrayElements(mirrorlist, 10);
         // 初始化界面
         const current_page_text = list_ctl.querySelector(".current-page");
         const total_page_text = list_ctl.querySelector(".total-page");
@@ -443,19 +503,18 @@ async function initPluginList(plugin_list, list_ctl) {
 
         // 切换页面
         const switchPage = async () => {
-            list_tips_event_target.dispatchEvent(list_tips_loading_event);
-            const current_page = parseInt(current_page_text.textContent) - 1;
-            const manifest_list = await getManifestList(mirrorlist_chunks[current_page]);
-            const fragment = getPluginListContentFragment(manifest_list);
-            plugin_list.innerHTML = "";
-            plugin_list.appendChild(fragment);
-            list_tips_event_target.dispatchEvent(list_tips_end_event);
+            current_page = parseInt(current_page_text.textContent) - 1;
+            const mirrorlist_current = mirrorlist_chunks[current_page]
+            slug = await add_plugin_list(plugin_list, mirrorlist_current)
+            if (!start) {
+                start = true;
+                select_plugin_list(plugin_list, list_ctl, total_page_text)
+            }
         }
 
         // 触发上一页与下一页
         list_ctl_event_target.addEventListener("previousPage", switchPage);
         list_ctl_event_target.addEventListener("nextPage", switchPage);
-
 
         // 列表排序
         const triggerSortEvent = () => {
@@ -490,6 +549,20 @@ async function initPluginList(plugin_list, list_ctl) {
     }
 }
 
+async function get_select_mirrorlist(mirrorlist) {
+    let platform
+    if (config.plugin_type[1] !== "current") {
+        platform = config.plugin_type[1];
+    } else {
+        platform = "win32";
+    }
+    const mirrorlist_select = mirrorlist.filter(item => 
+        item.name.includes(config.search) && 
+      (item.platform.includes(platform)) && 
+      (item.type === config.plugin_type[0] || config.plugin_type[0] === "all")
+    );
+    return mirrorlist_select;
+}
 
 // 配置界面
 export async function onConfigView(view) {
