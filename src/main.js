@@ -53,7 +53,10 @@ function getConfig() {
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
-        return config?.plugins_marketplace ?? default_config;
+        return {
+            ...default_config,
+            ...config?.[plugin.manifest.slug] ?? {}
+        };
     }
     catch (error) {
         return default_config;
@@ -67,7 +70,7 @@ function setConfig(new_config) {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
 
-        config["plugins_marketplace"] = new_config;
+        config[plugin.manifest.slug] = new_config;
 
         const config_string = JSON.stringify(config, null, 4);
         fs.writeFileSync(config_path, config_string, "utf-8");
