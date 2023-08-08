@@ -460,9 +460,8 @@ async function select_plugin_list(plugin_list, list_ctl, total_page_text) {
     };
     // 可见性监听
     const observer = new IntersectionObserver(entries => {
-        console.log("test")
         entries.forEach(entry => {
-            if (entry.isIntersecting && !scrollListenerAdded) {
+            if (entry.isIntersecting) {
                 const scrollElement = document.querySelector(".liteloader .q-scroll-view");
                 // 添加滚动事件监听器
                 scrollElement.addEventListener("scroll", async () => {
@@ -477,7 +476,6 @@ async function select_plugin_list(plugin_list, list_ctl, total_page_text) {
                         }
                     }
                 });
-                scrollListenerAdded = true;
             }
         });
     }, options);
