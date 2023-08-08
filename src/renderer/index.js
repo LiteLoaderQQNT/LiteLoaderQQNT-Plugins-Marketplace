@@ -127,7 +127,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
                 <button class="q-button q-button--small q-button--secondary uninstall">卸载</button>
                 <button class="q-button q-button--small q-button--secondary update">更新</button>
                 <button class="q-button q-button--small q-button--secondary restart">重启</button>
-                <button class="q-button q-button--small q-button--secondary installing">正在安装</button>
+                <button class="q-button q-button--small q-button--secondary stauts"></button>
             </div>
         </div>
         <hr class="horizontal-dividing-line" />
@@ -148,7 +148,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     // 获取按钮
     const details_btn = doc.querySelector(".details");
     const install_btn = doc.querySelector(".install");
-    const installing_btn = doc.querySelector(".installing");
+    const stauts_btn = doc.querySelector(".stauts");
     const uninstall_btn = doc.querySelector(".uninstall");
     const update_btn = doc.querySelector(".update");
     const restart_btn = doc.querySelector(".restart");
@@ -173,7 +173,7 @@ function createPluginItem(manifest, details, install, uninstall, update, restart
     uninstall_btn.classList.toggle("hidden", !(is_installed && is_updated));
     update_btn.classList.toggle("hidden", !(is_installed && !is_updated));
     restart_btn.classList.toggle("hidden", true);
-    installing_btn.classList.toggle("hidden", true);
+    stauts_btn.classList.toggle("hidden", true);
 
     return doc.querySelector(".wrap");
 }
@@ -193,9 +193,10 @@ function addPluginListContentFragment(fragment, manifest_list) {
         event.target.disabled = true;
         const parentNode = event.target.parentNode;
         event.target.classList.toggle("hidden", true);
-        parentNode.querySelector(".installing").classList.remove("hidden");
+        parentNode.querySelector(".stauts").classList.remove("hidden");
+        parentNode.querySelector(".stauts").innerText = `正在${event.target.innerText}`
         if (await callback()) {
-            parentNode.querySelector(".installing").classList.toggle("hidden", true);
+            parentNode.querySelector(".stauts").classList.toggle("hidden", true);
             parentNode.querySelector(".restart").classList.remove("hidden");
         }
         event.target.disabled = false;
@@ -459,6 +460,7 @@ async function select_plugin_list(plugin_list, list_ctl, total_page_text) {
     };
     // 可见性监听
     const observer = new IntersectionObserver(entries => {
+        console.log("test")
         entries.forEach(entry => {
             if (entry.isIntersecting && !scrollListenerAdded) {
                 const scrollElement = document.querySelector(".liteloader .q-scroll-view");
