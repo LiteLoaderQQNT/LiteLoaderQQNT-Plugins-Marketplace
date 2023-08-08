@@ -17,7 +17,7 @@ const type_map = new Map([
     ["core", "核心"],
     ["extension", "扩展"],
     ["theme", "主题"],
-    ["framew", "依赖"],
+    ["framework", "依赖"],
 ]);
 
 const platform_map = new Map([
