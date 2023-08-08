@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
-        "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     "plugin_type": [
         "all",
@@ -33,7 +33,13 @@ function request(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith("https") ? https : http;
         const req = protocol.get(url);
-        req.on("error", error => reject(error));
+        req.on("error", error => {
+            if (url.includes("https://github.com/") && !url.includes("https://ghproxy.com/ ")) {
+                const proxyUrl = `https://ghproxy.com/ ${url}`;
+                return resolve(request(proxyUrl));
+            }
+            reject(error);
+        });
         req.on("response", res => {
             // 发生跳转就继续请求
             if (res.statusCode >= 300 && res.statusCode <= 399) {
@@ -84,9 +90,9 @@ function setConfig(new_config) {
 async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const release_latest_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
-    const release_tag_url = `https://ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
-    const source_code_url = `https://ghproxy.com/https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
+    const release_latest_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const release_tag_url = `https://github.com/${repo}/releases/download/${tag}/${name}`;
+    const source_code_url = `https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
 
     const downloadAndInstallPlugin = async (url) => {
         const body = await request(url);

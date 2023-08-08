@@ -41,12 +41,27 @@ const list_tips_error_event = new CustomEvent("error");
 const list_tips_end_event = new CustomEvent("end");
 
 
+function fetchWithProxyFallback(url) {
+    try {
+        const response = fetch(url);
+        if (response.ok) {
+            return response;
+        }
+    } catch (error) {
+        // Ignore the error and proceed to the proxy fallback
+    }
+
+    const proxyUrl = `https://ghproxy.com/${url}`;
+    return fetch(proxyUrl);
+}
+
+
 // 合并插件源为新列表
 async function mergeMirrorlist(mirrorlist) {
     const mirrorlist_set = new Set();
 
     // 同时请求多个源的列表，并按照顺序返回
-    const requests = mirrorlist.map(url => fetch(url));
+    const requests = mirrorlist.map(url => fetchWithProxyFallback(url));
     const responses = await Promise.allSettled(requests);
 
     // 处理多个仓库源
@@ -70,8 +85,8 @@ async function getManifestList(mirrorlist) {
     // 同时请求多个源的列表，并按照顺序返回
     const requests = mirrorlist.map(info => {
         const { repo, branch } = info;
-        const url = `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
-        return fetch(url);
+        const url = `https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
+        return fetchWithProxyFallback(url);
     });
     const responses = await Promise.allSettled(requests);
 
@@ -91,7 +106,7 @@ async function getManifestList(mirrorlist) {
 function processingManifest(manifest) {
     const { repo, branch } = manifest?.repository ?? { repo: "", branch: "" };
     const thumbnail = manifest?.thumbnail;
-    const plugin_icon = `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/${thumbnail}`;
+    const plugin_icon = `https://raw.githubusercontent.com/${repo}/${branch}/${thumbnail}`;
     const default_icon = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/default_icon.png`;
     const system_name = manifest?.platform?.map(value => platform_map.get(value)) ?? "";
     return {
@@ -109,10 +124,20 @@ function processingManifest(manifest) {
 
 // 插件条目生成函数
 function createPluginItem(manifest, details, install, uninstall, update, restart) {
+    // 缩略图
+    let thumbnailURL = manifest.thumbnail;
+    if (!thumbnailURL.startsWith("llqqnt://local-file")) {
+        fetchWithProxyFallback(thumbnailURL).then(response => {
+            return response.blob();
+        }).then(blob => {
+            thumbnailURL = URL.createObjectURL(blob);;
+        });
+    }
+    
     const temp = `
     <div class="wrap">
         <div class="vertical-list-item">
-            <img src="${manifest.thumbnail}" class="thumbnail">
+            <img src="${thumbnailURL}" class="thumbnail">
             <div class="info">
                 <h2 class="name">${manifest.name}</h2>
                 <p class="secondary-text description">${manifest.description}</p>
