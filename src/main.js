@@ -48,7 +48,7 @@ function request(url) {
 }
 
 
-function getConfig() {
+function getConfig(plugin) {
     const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
@@ -64,7 +64,7 @@ function getConfig() {
 }
 
 
-function setConfig(new_config) {
+function setConfig(plugin, new_config) {
     const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
@@ -187,12 +187,12 @@ function onLoad(plugin) {
     // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
-        (event, ...message) => getConfig(...message)
+        (event, ...message) => getConfig(plugin, ...message)
     );
     // 设置配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.setConfig",
-        (event, ...message) => setConfig(...message)
+        (event, ...message) => setConfig(plugin, ...message)
     );
     // 安装
     ipcMain.handle(
