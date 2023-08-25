@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
-        "https://ghproxy.com/https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
+        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     "plugin_type": [
         "all",
