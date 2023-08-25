@@ -7,11 +7,11 @@
     "version": "0.1.4",
     "thumbnail": false,
     "author": {
-        "name": "沫烬染",
-        "link": "https://github.com/mo-jinran"
+        "name": "LiteLoaderQQNT",
+        "link": "https://github.com/LiteLoaderQQNT"
     },
     "repository": {
-        "repo": "mo-jinran/LiteLoaderQQNT-Plugins-Marketplace",
+        "repo": "LiteLoaderQQNT/LiteLoaderQQNT-Plugins-Marketplace",
         "branch": "v3",
         "use_release": {
             "tag": "0.1.4",
