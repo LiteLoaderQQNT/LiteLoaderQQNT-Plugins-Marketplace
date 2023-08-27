@@ -4,17 +4,17 @@
     "name": "LiteLoader 插件市场",
     "slug": "plugins_marketplace",
     "description": "LiteLoaderQQNT的插件市场",
-    "version": "0.1.3",
-    "thumbnail": "",
+    "version": "0.1.5",
+    "thumbnail": false,
     "author": {
-        "name": "沫烬染",
-        "link": "https://github.com/mo-jinran"
+        "name": "LiteLoaderQQNT",
+        "link": "https://github.com/LiteLoaderQQNT"
     },
     "repository": {
-        "repo": "mo-jinran/LiteLoaderQQNT-Plugins-Marketplace",
+        "repo": "LiteLoaderQQNT/LiteLoaderQQNT-Plugins-Marketplace",
         "branch": "v3",
         "use_release": {
-            "tag": "0.1.3",
+            "tag": "0.1.5",
             "name": "LiteLoaderQQNT-Plugins-Marketplace.zip"
         }
     },

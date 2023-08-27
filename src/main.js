@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     "mirrorlist": [
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
+        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     "plugin_type": [
         "all",
@@ -54,15 +54,12 @@ function request(url) {
 }
 
 
-function getConfig() {
+function getConfig(plugin) {
     const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
-        return {
-            ...default_config,
-            ...config?.[plugin.manifest.slug] ?? {}
-        };
+        return config?.plugins_marketplace ?? default_config;
     }
     catch (error) {
         return default_config;
@@ -70,13 +67,13 @@ function getConfig() {
 }
 
 
-function setConfig(new_config) {
+function setConfig(plugin, new_config) {
     const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
 
-        config[plugin.manifest.slug] = new_config;
+        config["plugins_marketplace"] = new_config;
 
         const config_string = JSON.stringify(config, null, 4);
         fs.writeFileSync(config_path, config_string, "utf-8");
@@ -193,12 +190,12 @@ function onLoad(plugin) {
     // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
-        (event, ...message) => getConfig(...message)
+        (event, ...message) => getConfig(plugin, ...message)
     );
     // 设置配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.setConfig",
-        (event, ...message) => setConfig(...message)
+        (event, ...message) => setConfig(plugin, ...message)
     );
     // 安装
     ipcMain.handle(
