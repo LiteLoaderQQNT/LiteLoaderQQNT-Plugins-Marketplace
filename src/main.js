@@ -1,104 +1,102 @@
 // 运行在 Electron 主进程 下的插件入口
-const { ipcMain, app, net } = require("electron");
+const { ipcMain, app, net, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const https = require("https");
 const StreamZip = require("node-stream-zip");
 
-
 // 默认配置
 const default_config = {
-    "mirrorlist": [
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/plugins.json",
-        "https://raw.githubusercontent.com/mo-jinran/LiteLoaderQQNT-Plugin-List/main/builtins.json"
+    mirrorlist: [
+        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
-    "plugin_type": [
-        "all",
-        "current"
-    ],
-    "sort_order": [
-        "random",
-        "forward"
-    ],
-    "list_style": [
-        "single",
-        "loose"
-    ]
-}
-
+    plugin_type: ["all", "current"],
+    sort_order: ["random", "forward"],
+    list_style: ["single", "loose"]
+};
 
 // 简易的GET请求函数
 function request(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith("https") ? https : http;
         const req = protocol.get(url);
-        req.on("error", error => reject(error));
-        req.on("response", res => {
+        req.on("error", (error) => reject(error));
+        req.on("response", (res) => {
             // 发生跳转就继续请求
             if (res.statusCode >= 300 && res.statusCode <= 399) {
                 return resolve(request(res.headers.location));
             }
             const chunks = [];
-            res.on("error", error => reject(error));
-            res.on("data", chunk => chunks.push(chunk));
+            res.on("error", (error) => reject(error));
+            res.on("data", (chunk) => chunks.push(chunk));
             res.on("end", () => resolve(Buffer.concat(chunks)));
         });
     });
 }
 
-
-function getConfig(liteloader) {
-    const config_path = liteloader.path.config;
+function getConfig(plugin) {
+    const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
-        return {
-            ...default_config,
-            ...config?.[plugin.manifest.slug] ?? {}
-        };
-    }
-    catch (error) {
+
+        if (
+            config?.plugins_marketplace == null ||
+            config?.plugins_marketplace?.mirrorlist == null ||
+            config?.plugins_marketplace?.mirrorlist?.length == 0
+        ) {
+            setConfig(plugin, default_config);
+            return default_config;
+        }
+
+        return config.plugins_marketplace;
+    } catch (error) {
         return default_config;
     }
 }
 
-
-function setConfig(liteloader, new_config) {
-    const config_path = liteloader.path.config;
+function setConfig(plugin, new_config) {
+    const config_path = LiteLoader.path.config;
     try {
         const data = fs.readFileSync(config_path, "utf-8");
         const config = JSON.parse(data);
 
-        config[plugin.manifest.slug] = new_config;
+        config["plugins_marketplace"] = new_config;
 
         const config_string = JSON.stringify(config, null, 4);
         fs.writeFileSync(config_path, config_string, "utf-8");
-    }
-    catch (error) {
+    } catch (error) {
         return error;
     }
 }
 
-
-async function install(liteloader, manifest) {
+async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const latest_release_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
-    const source_code_url = `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`;
+    const release_latest_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const release_tag_url = `https://ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
+    const source_code_url = `https://ghproxy.com/https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
 
     const downloadAndInstallPlugin = async (url) => {
         const body = await request(url);
 
         // 保存插件压缩包
-        const cache_path = path.join(liteloader.path.plugins_cache, "plugins_marketplace");
-        const cache_file_path = path.join(cache_path, `${repo.split("/")[1]}.zip`);
+        const cache_path = path.join(
+            LiteLoader.path.plugins_cache,
+            "plugins_marketplace"
+        );
+        const cache_file_path = path.join(cache_path, `${manifest.slug}.zip`);
         fs.mkdirSync(cache_path, { recursive: true });
         fs.writeFileSync(cache_file_path, body);
 
         // 解压并安装插件
-        const { plugins, builtins } = liteloader.path;
-        const plugin_path = manifest.type == "core" ? builtins : plugins;
+        const { plugins, builtins } = LiteLoader.path;
+        const plugin_path = `${manifest.type == "core" ? builtins : plugins}/${
+            use_release ? manifest.slug : ""
+        }`;
+        fs.mkdirSync(plugin_path, { recursive: true });
         const zip = new StreamZip.async({ file: cache_file_path });
         const entries = await zip.entries();
         for (const entry of Object.values(entries)) {
@@ -115,21 +113,21 @@ async function install(liteloader, manifest) {
             }
         }
         await zip.close();
-    }
+    };
 
     try {
-        const url = use_release ? latest_release_url : source_code_url;
+        const release_url =
+            tag == "latest" ? release_latest_url : release_tag_url;
+        const url = use_release ? release_url : source_code_url;
         await downloadAndInstallPlugin(url);
         return true;
-    }
-    catch (error) {
+    } catch (error) {
         return false;
     }
 }
 
-
-async function uninstall(liteloader, manifest, update_mode = false) {
-    const paths = liteloader.plugins[manifest.slug].path;
+async function uninstall(manifest, update_mode = false) {
+    const paths = LiteLoader.plugins[manifest.slug].path;
 
     // 没有返回false
     if (!paths) {
@@ -151,57 +149,57 @@ async function uninstall(liteloader, manifest, update_mode = false) {
     return true;
 }
 
-
-async function update(liteloader, manifest) {
+async function update(manifest) {
     // 先卸载
-    if (!(await uninstall(liteloader, manifest, true))) {
+    if (!(await uninstall(manifest, true))) {
         return false;
     }
     // 后安装
-    if (!(await install(liteloader, manifest))) {
+    if (!(await install(manifest))) {
         return false;
     }
     return true;
 }
-
 
 async function restart() {
     app.relaunch();
     app.exit(0);
 }
 
-
 function isOnline() {
     return net.online;
 }
 
+function openWeb(url) {
+    shell.openExternal(url);
+}
 
 // 加载插件时触发
-function onLoad(plugin, liteloader) {
+function onLoad(plugin) {
     // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
-        (event, ...message) => getConfig(liteloader, ...message)
+        (event, ...message) => getConfig(plugin, ...message)
     );
     // 设置配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.setConfig",
-        (event, ...message) => setConfig(liteloader, ...message)
+        (event, ...message) => setConfig(plugin, ...message)
     );
     // 安装
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.install",
-        (event, ...message) => install(liteloader, ...message)
+        (event, ...message) => install(...message)
     );
     // 卸载
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.uninstall",
-        (event, ...message) => uninstall(liteloader, ...message)
+        (event, ...message) => uninstall(...message)
     );
     // 更新
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.update",
-        (event, ...message) => update(liteloader, ...message)
+        (event, ...message) => update(...message)
     );
     // 重开
     ipcMain.handle(
@@ -212,10 +210,13 @@ function onLoad(plugin, liteloader) {
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.isOnline",
         (event, ...message) => isOnline()
-    )
+    );
+    // 外部打开网址
+    ipcMain.on("LiteLoader.plugins_marketplace.openWeb", (event, ...message) =>
+        openWeb(...message)
+    );
 }
-
 
 module.exports = {
     onLoad
-}
+};
