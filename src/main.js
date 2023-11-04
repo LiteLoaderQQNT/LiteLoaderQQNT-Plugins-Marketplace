@@ -97,7 +97,7 @@ async function install(manifest) {
     const source_code_url = `https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
 
     const downloadAndInstallPlugin = async (url) => {
-        const body = await request(url);
+        const body = (await request(url)).data;
 
         // 保存插件压缩包
         const cache_path = path.join(
