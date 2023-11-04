@@ -9,8 +9,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     mirrorlist: [
-        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
-        "https://ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
+        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     plugin_type: ["all", "current"],
     sort_order: ["random", "forward"],
@@ -75,9 +75,9 @@ function setConfig(plugin, new_config) {
 async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const release_latest_url = `https://ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
-    const release_tag_url = `https://ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
-    const source_code_url = `https://ghproxy.com/https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
+    const release_latest_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const release_tag_url = `https://github.com/${repo}/releases/download/${tag}/${name}`;
+    const source_code_url = `https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
 
     const downloadAndInstallPlugin = async (url) => {
         const body = await request(url);
