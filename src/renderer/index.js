@@ -7,7 +7,7 @@ const utils = await import(
 );
 
 // 获取配置文件
-const config = await plugins_marketplace.getConfig();
+var config = await plugins_marketplace.getConfig();
 
 // 初始化
 let search = "";
@@ -49,14 +49,14 @@ async function mergeMirrorlist(mirrorlist) {
     const mirrorlist_set = new Set();
 
     // 同时请求多个源的列表，并按照顺序返回
-    const requests = mirrorlist.map((url) => fetch(url));
+    const requests = mirrorlist.map((url) => plugins_marketplace.request(url));
     const responses = await Promise.allSettled(requests);
 
     // 处理多个仓库源
     for (const response of responses) {
         // 将每个源的列表整合到一个列表中
         if (response.status == "fulfilled") {
-            const list = await response.value.json();
+            const list = JSON.parse(response.value.str);
             list.forEach((item) => mirrorlist_set.add(JSON.stringify(item)));
         }
     }
@@ -73,7 +73,7 @@ async function getManifestList(mirrorlist) {
     const requests = mirrorlist.map((info) => {
         const { repo, branch } = info;
         const url = `https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`;
-        return fetch(url);
+        return plugins_marketplace.request(url);
     });
     const responses = await Promise.allSettled(requests);
 
@@ -81,7 +81,7 @@ async function getManifestList(mirrorlist) {
     for (const response of responses) {
         if (response.status == "fulfilled") {
             try {
-                const manifest = await response.value.json();
+                const manifest = JSON.parse(response.value.str);
                 plugins_list.push(manifest);
             } catch (error) {
                 console.error(error);
@@ -538,7 +538,8 @@ async function initListCtl(list_ctl, plugin_list) {
         });
     }
 
-    // 页码指标，上一页，下一页
+    // 页码指标，刷新页面，上一页，下一页
+    const refresh_page = list_ctl.querySelector(".refresh-page");
     const current_page_text = list_ctl.querySelector(".current-page");
     const total_page_text = list_ctl.querySelector(".total-page");
 
@@ -547,6 +548,13 @@ async function initListCtl(list_ctl, plugin_list) {
 
     current_page_text.textContent = 0;
     total_page_text.textContent = 0;
+
+    refresh_page.addEventListener("click", async () => {
+        config = await plugins_marketplace.getConfig();
+        start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
+        start_mirrorlist = await getManifestList(start_mirrorlist);
+        await initPluginList(plugin_list, list_ctl);
+    });
 
     previous_page_btn.addEventListener("click", () => {
         const content = current_page_text.textContent;

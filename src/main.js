@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const https = require("https");
+const HttpsProxyAgent = require("https-proxy-agent");
 const StreamZip = require("node-stream-zip");
 
 // 默认配置
@@ -12,16 +13,19 @@ const default_config = {
         "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
         "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
+    proxy: null,
     plugin_type: ["all", "current"],
     sort_order: ["random", "forward"],
     list_style: ["single", "loose"]
 };
 
+var proxyAgent = undefined;
+
 // 简易的GET请求函数
 function request(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith("https") ? https : http;
-        const req = protocol.get(url);
+        const req = protocol.get(url, { agent: proxyAgent });
         req.on("error", (error) => reject(error));
         req.on("response", (res) => {
             // 发生跳转就继续请求
@@ -31,7 +35,14 @@ function request(url) {
             const chunks = [];
             res.on("error", (error) => reject(error));
             res.on("data", (chunk) => chunks.push(chunk));
-            res.on("end", () => resolve(Buffer.concat(chunks)));
+            res.on("end", () => {
+                var data = Buffer.concat(chunks);
+                resolve({
+                    data: data,
+                    str: data.toString("utf-8"),
+                    url: res.url
+                });
+            });
         });
     });
 }
@@ -49,6 +60,12 @@ function getConfig(plugin) {
         ) {
             setConfig(plugin, default_config);
             return default_config;
+        }
+
+        if (config?.proxy && config?.proxy != "") {
+            proxyAgent = new HttpsProxyAgent.HttpsProxyAgent(config.proxy);
+        } else {
+            proxyAgent = undefined;
         }
 
         return config.plugins_marketplace;
@@ -176,6 +193,13 @@ function openWeb(url) {
 
 // 加载插件时触发
 function onLoad(plugin) {
+    getConfig(plugin);
+
+    // 请求
+    ipcMain.handle("LiteLoader.plugins_marketplace.request", (event, url) =>
+        request(url)
+    );
+
     // 获取配置
     ipcMain.handle(
         "LiteLoader.plugins_marketplace.getConfig",
