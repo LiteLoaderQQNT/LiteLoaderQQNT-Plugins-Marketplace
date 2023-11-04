@@ -12,8 +12,7 @@ var config = await plugins_marketplace.getConfig();
 // 初始化
 let search = "";
 let slug, current_page, mirrorlist_chunks;
-let start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
-start_mirrorlist = await getManifestList(start_mirrorlist);
+let start_mirrorlist = [];
 
 // 创建一个类型映射
 const type_map = new Map([
@@ -670,6 +669,9 @@ async function initPluginList(plugin_list, list_ctl) {
 
 // 配置界面
 export async function onConfigView(view) {
+    start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
+    start_mirrorlist = await getManifestList(start_mirrorlist);
+
     // CSS
     const css_file_path = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/style.css`;
     const link_element = document.createElement("link");
