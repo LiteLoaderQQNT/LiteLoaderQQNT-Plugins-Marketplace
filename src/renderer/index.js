@@ -597,8 +597,7 @@ async function initListTips(list_tips) {
     });
 }
 
-// 初始化插件列表区域
-async function initPluginList(plugin_list, list_ctl) {
+async function showLoading() {
     // 无网络先显示检查网络的tips
     if (!(await plugins_marketplace.isOnline())) {
         list_tips_event_target.dispatchEvent(list_tips_offline_event);
@@ -608,7 +607,11 @@ async function initPluginList(plugin_list, list_ctl) {
     else {
         list_tips_event_target.dispatchEvent(list_tips_loading_event);
     }
+}
 
+// 初始化插件列表区域
+async function initPluginList(plugin_list, list_ctl) {
+    await showLoading();
     try {
         // let start = false;
         const mirrorlist = await get_select_mirrorlist(start_mirrorlist);
@@ -669,9 +672,6 @@ async function initPluginList(plugin_list, list_ctl) {
 
 // 配置界面
 export async function onConfigView(view) {
-    start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
-    start_mirrorlist = await getManifestList(start_mirrorlist);
-
     // CSS
     const css_file_path = `llqqnt://local-file/${plugin_path.plugin}/src/renderer/style.css`;
     const link_element = document.createElement("link");
@@ -690,7 +690,14 @@ export async function onConfigView(view) {
     const list_ctl = view.querySelector(".list-ctl");
     const list_tips = view.querySelector(".list-tips");
     const plugin_list = view.querySelector(".plugin-list");
-    await initListCtl(list_ctl, plugin_list);
+
+    //先显示加载提示
     await initListTips(list_tips);
+    await showLoading();
+
+    start_mirrorlist = await mergeMirrorlist(config.mirrorlist);
+    start_mirrorlist = await getManifestList(start_mirrorlist);
+
+    await initListCtl(list_ctl, plugin_list);
     await initPluginList(plugin_list, list_ctl);
 }
