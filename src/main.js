@@ -10,8 +10,8 @@ const StreamZip = require("node-stream-zip");
 // 默认配置
 const default_config = {
     mirrorlist: [
-        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
-        "https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
+        "https://mirror.ghproxy.com/raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/plugins.json",
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/LiteLoaderQQNT/LiteLoaderQQNT-Plugin-List/v3/builtins.json"
     ],
     proxy: null,
     plugin_type: ["all", "current"],
@@ -22,7 +22,7 @@ const default_config = {
 var proxyAgent = undefined;
 
 // 简易的GET请求函数
-function request(url) {
+function 请求(url) {
     return new Promise((resolve, reject) => {
         const protocol = url.startsWith("https") ? https : http;
         const req = protocol.get(url, { agent: proxyAgent });
@@ -30,7 +30,7 @@ function request(url) {
         req.on("response", (res) => {
             // 发生跳转就继续请求
             if (res.statusCode >= 300 && res.statusCode <= 399) {
-                return resolve(request(res.headers.location));
+                return resolve(请求(res.headers.location));
             }
             const chunks = [];
             res.on("error", (error) => reject(error));
@@ -92,12 +92,12 @@ function setConfig(plugin, new_config) {
 async function install(manifest) {
     const { repo, branch, use_release } = manifest.repository;
     const { tag, name } = use_release ?? {};
-    const release_latest_url = `https://github.com/${repo}/releases/${tag}/download/${name}`;
-    const release_tag_url = `https://github.com/${repo}/releases/download/${tag}/${name}`;
-    const source_code_url = `https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
+    const release_latest_url = `https://mirror.ghproxy.com/https://github.com/${repo}/releases/${tag}/download/${name}`;
+    const release_tag_url = `https://mirror.ghproxy.com/https://github.com/${repo}/releases/download/${tag}/${name}`;
+    const source_code_url = `https://mirror.ghproxy.com/https://github.com/${repo}/archive/refs/heads/${branch}.zip`;
 
     const downloadAndInstallPlugin = async (url) => {
-        const body = (await request(url)).data;
+        const body = (await 请求(url)).data;
 
         // 保存插件压缩包
         const cache_path = path.join(
@@ -197,7 +197,7 @@ function onLoad(plugin) {
 
     // 请求
     ipcMain.handle("LiteLoader.plugins_marketplace.request", (event, url) =>
-        request(url)
+        请求(url)
     );
 
     // 获取配置
